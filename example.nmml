@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<project>
+  <meta title="ExtensionsPack Example" description="ExtensionsPack Example"
+    package="ru.zzzzzzerg" version="1.0.0" company="zzzzzzerg" />
+
+  <app title="ExtensionsPack Example" file="ext_pack" main="Main"
+    version="1.0.0" company="zzzzzzerg" />
+	
+	<window width="480" height="800" fps="30" orientation="portrait" resizable="true" if="web" />
+	<window width="480" height="800" fps="30" orientation="portrait" fullscreen="false" unless="web" />
+ 	
+	<set name="BUILD_DIR" value="export" />
+	
+	<!--<setenv name="no_console" value="1" />-->
+	
+	<classpath name="source" />
+	
+	<assets path="assets" if="android" >
+		<sound path="data/beep.wav" id="Beep" />
+		
+		<!-- Your sound embedding code here... -->
+		
+	</assets>
+	
+	<assets path="assets" if="desktop" >
+		<sound path="data/beep.wav" id="Beep" />
+		
+		<!-- Your sound embedding code here... -->
+		
+	</assets>
+	
+	<assets path="assets" if="target_flash" >
+		<sound path="data/beep.mp3" id="Beep" />
+		
+		<!-- Your sound embedding code here... -->
+		
+	</assets>
+	
+	<assets path="assets" if="target_js" >
+		<sound path="data/beep.mp3" id="Beep" />
+		
+		<!-- Your sound embedding code here... -->
+		
+	</assets>
+	
+  <assets path="assets" exclude="*.wav" if="flash" />
+  <assets path="assets" unless="flash" />
+	
+	<icon name="assets/HaxeFlixel.svg" />
+
+	<haxelib name="nme" />
+	<haxelib name="flixel"/>
+
+  <include path="Extension" />
+
+  <template path="MainActivity.java" rename="src/ru/zzzzzzerg/MainActivity.java" if="android" />
+  <java path="source/java" />
+  <!-- <java path="flurry" /> -->
+  <template path="FlurryAgent.jar" rename="libs/FlurryAgent.jar" if="android" />
+  <template path="AndroidManifest.xml" if="android" />
+
+</project>
