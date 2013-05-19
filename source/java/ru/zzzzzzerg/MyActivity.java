@@ -19,7 +19,8 @@ public class MyActivity extends org.haxe.nme.GameActivity
         "FLURRY_APPLICATION_KEY",
         "LOCALYTICS_APPLICATION_KEY");
 
-    IAP.createService(this);
+    String license = "YOU_BASE_64_PUBLIC_KEY";
+    IAP.createService(this, license);
   }
 
   @Override

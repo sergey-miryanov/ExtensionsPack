@@ -10,6 +10,7 @@ import android.os.IBinder;
 import android.os.Bundle;
 import android.os.RemoteException;
 import android.util.Log;
+import android.util.Base64;
 import android.text.TextUtils;
 import android.content.IntentSender.SendIntentException;
 
@@ -77,6 +78,7 @@ public class IAP
   private static final String SIGNATURE_ALGORITHM = "SHA1withRSA";
 
   private static String tag = "IAP:ru/zzzzzzerg";
+  private static String license = "";
 
   public static IInAppBillingService iapService;
   public static ServiceConnection iapServiceConnection;
@@ -86,11 +88,12 @@ public class IAP
 
   public static String packageName;
 
-  public static void createService(Context ctx)
+  public static void createService(Context ctx, String licensePublicKey)
   {
     iapService = null;
     iapServiceConnection = null;
     packageName = ctx.getPackageName();
+    license = licensePublicKey;
     setupDone = false;
     buyCallback = null;
 
@@ -260,7 +263,7 @@ public class IAP
           String sku = skus.get(i);
           String signature = signatures.get(i);
 
-          if(verify("FIXME", data, signature, callback))
+          if(verify(license, data, signature, callback))
           {
             callback.call("addPurchase", new Object[] {data});
           }
@@ -399,7 +402,7 @@ public class IAP
               new Object[] {"Data or Signature is null: " + d,
               "handleActivityResult"});
         }
-        else if(verify("FIXME", purchaseData, signature, buyCallback))
+        else if(verify(license, purchaseData, signature, buyCallback))
         {
           buyCallback.call("purchased", new Object[] {purchaseData});
         }
@@ -432,53 +435,34 @@ public class IAP
   static boolean verify(String publicKey, String data, String signature,
       HaxeObject callback)
   {
+    if(!TextUtils.isEmpty(signature))
+    {
+      try
+      {
+        byte[] decodedKey = Base64.decode(publicKey, Base64.DEFAULT);
+        KeyFactory keyFactory = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
+        PublicKey key = keyFactory.generatePublic(new X509EncodedKeySpec(decodedKey));
+
+        Signature sig = Signature.getInstance(SIGNATURE_ALGORITHM);
+        sig.initVerify(key);
+        sig.update(data.getBytes());
+
+        if(!sig.verify(Base64.decode(signature, Base64.DEFAULT)))
+        {
+          callback.call("onWarning",
+              new Object[] {"Signature verification failed", "verify"});
+          return false;
+        }
+      }
+      catch(Exception e)
+      {
+        callback.call("onException",
+            new Object[] {e.toString(), "verify"});
+        return false;
+      }
+    }
+
     return true;
-    //if(!TextUtils.isEmpty(signature))
-    //{
-    //  try
-    //  {
-    //    byte[] decodedKey = Base64.decode(publickey);
-    //    KeyFactory keyFactory = KeyFactory.getInstance(KEY_FACTORY_ALGORITHM);
-    //    PublicKey key = keyFactory.generatePublic(new X509EncodedSpec(decodedKey));
-
-    //    Signature sig = Signature.getInstance(SIGNATURE_ALGORITHM);
-    //    sig.initVerify(publicKey);
-    //    sig.update(data.getBytes());
-
-    //    if(!sig.verify(Base64.decode(signature)))
-    //    {
-    //      callback.call("onError", new Object[] {0, "Signature verification failed"});
-    //      return false;
-    //    }
-    //  }
-    //  catch(NoSuchAlgorithm e)
-    //  {
-    //    callback.call("onError", new Object[] {0, e.toString()});
-    //    return false;
-    //  }
-    //  catch(InvalidKeySpecException e)
-    //  {
-    //    callback.call("onError", new Object[] {0, e.toString()});
-    //    return false;
-    //  }
-    //  catch (Base64DecoderException e)
-    //  {
-    //    callback.call("onError", new Object[] {0, e.toString()});
-    //    return false;
-    //  }
-    //  catch(InvalidKeyException e)
-    //  {
-    //    callback.call("onError", new Object[] {0, e.toString()});
-    //    return false;
-    //  }
-    //  catch(SignatureException e)
-    //  {
-    //    callback.call("onError", new Object[] {0, e.toString()});
-    //    return false;
-    //  }
-    //}
-
-    //return true;
   }
 
   // Workaround to bug where sometimes response codes come as Long instead of Integer
