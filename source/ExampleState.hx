@@ -23,7 +23,6 @@ class ExampleState extends FlxState
 
   var _getItemsHandler : ProductList;
   var _purchaseItemHandler : PurchaseItem;
-  var _getPurchasesHandler : ProductList;
   var _purchaseCanceledItemHandler : PurchaseItem;
   var _purchaseRefundedItemHandler : PurchaseItem;
   var _purchaseUnavailableItemHandler : PurchaseItem;
@@ -34,7 +33,6 @@ class ExampleState extends FlxState
   {
     _getItemsHandler = null;
     _purchaseItemHandler = null;
-    _getPurchasesHandler = null;
     _purchaseCanceledItemHandler = null;
 
     _getItems = new FlxSprite(50, 50);
@@ -93,8 +91,8 @@ class ExampleState extends FlxState
       if(_getItems.overlapsPoint(FlxG.mouse))
       {
         trace("getItems->");
-        _getItemsHandler = new ProductList();
-        IAP.getItems(_getItemsHandler);
+        var getItems = new ProductList();
+        IAP.getItems(getItems);
         trace("<-getItems");
       }
       else if(_purchaseItem.overlapsPoint(FlxG.mouse))
@@ -107,22 +105,16 @@ class ExampleState extends FlxState
       }
       else if(_consumeItem.overlapsPoint(FlxG.mouse))
       {
-        trace("consumeItem->");
-        if(_purchaseItemHandler == null)
-        {
-          _purchaseItemHandler = new PurchaseItem("android.test.purchased",
-              _flash);
-          _purchaseItemHandler.token = "inapp:ru.zzzzzzerg:android.test.purchased";
-        }
-
-        IAP.consumeItem(_purchaseItemHandler);
-        trace("<-consumeItem");
+        trace("consumeAll->");
+        var consumeAll = new ConsumeAll();
+        IAP.getPurchases(consumeAll);
+        trace("<-consumeAll");
       }
       else if(_getPurchases.overlapsPoint(FlxG.mouse))
       {
         trace("getPurchases->");
-        _getPurchasesHandler = new ProductList();
-        IAP.getPurchases(_getPurchasesHandler);
+        var getPurchases = new PurchasesList();
+        IAP.getPurchases(getPurchases);
         trace("<-getPurchases");
       }
       else if(_purchaseCanceledItem.overlapsPoint(FlxG.mouse))
@@ -162,11 +154,63 @@ class ProductList extends ProductListBase
 
   override public function finish()
   {
-    trace("Print ProductList");
-    for (p in _products)
+    trace("Print Products List");
+    for (p in products)
     {
-      trace(p);
+      trace([p]);
     }
+  }
+}
+
+class PurchasesList extends PurchasesListBase
+{
+  public function new()
+  {
+    super();
+  }
+
+  override public function finish()
+  {
+    trace("Print Purchases List");
+    for (p in items)
+    {
+      trace([p]);
+    }
+  }
+}
+
+class ConsumeAll extends PurchasesListBase
+{
+  public function new()
+  {
+    super();
+  }
+
+  override public function finish()
+  {
+    var item = items.shift();
+    var consumeItems = new ConsumeItem(item, items);
+    IAP.consumeItem(consumeItems);
+  }
+}
+
+class ConsumeItem extends PurchaseBase
+{
+  var _items : Array<PurchaseInfo>;
+  public function new(itemToConsume, items)
+  {
+    super(itemToConsume.productId);
+    token = itemToConsume.purchaseToken;
+    item = itemToConsume;
+
+    _items = items;
+  }
+
+  override public function finish()
+  {
+    var item = _items.shift();
+    var consumeItems = new ConsumeItem(item, _items);
+    IAP.consumeItem(consumeItems);
   }
 }
 

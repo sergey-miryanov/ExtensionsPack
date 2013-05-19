@@ -57,7 +57,7 @@ class IAPAndroid
     }
   }
 
-  public static function getPurchases(productList : ProductListBase)
+  public static function getPurchases(purchasesList : PurchasesListBase)
   {
     if(_getPurchases == null)
     {
@@ -65,7 +65,7 @@ class IAPAndroid
           "getPurchases", "(Lorg/haxe/nme/HaxeObject;)V");
     }
 
-    _getPurchases(productList);
+    _getPurchases(purchasesList);
   }
 }
 #end
@@ -78,7 +78,7 @@ class IAPCpp
   }
 }
 
-typedef ProductStruct = {
+typedef ProductInfo = {
   title : String,
   price : String,
   type : String,
@@ -86,7 +86,7 @@ typedef ProductStruct = {
   productId : String,
 };
 
-typedef PurchaseStruct = {
+typedef PurchaseInfo = {
   developerPayload : String,
   orderId : String,
   productId : String,
@@ -120,24 +120,45 @@ class Callback
 
 class ProductListBase extends Callback
 {
-  public var _products : Array<ProductStruct>;
+  public var products : Array<ProductInfo>;
 
   public function new()
   {
     super();
 
-    _products = new Array();
+    products = new Array();
   }
 
   public function addProduct(jsonString : String)
   {
-    var p : ProductStruct = Json.parse(jsonString);
-    _products.push(p);
+    var p : ProductInfo = Json.parse(jsonString);
+    products.push(p);
   }
 
   public function finish()
   {
-    trace(["finish", "implement me"]);
+  }
+}
+
+class PurchasesListBase extends Callback
+{
+  public var items : Array<PurchaseInfo>;
+
+  public function new()
+  {
+    super();
+
+    items = new Array();
+  }
+
+  public function addPurchase(jsonString : String)
+  {
+    var p : PurchaseInfo = Json.parse(jsonString);
+    items.push(p);
+  }
+
+  public function finish()
+  {
   }
 }
 
@@ -145,7 +166,7 @@ class PurchaseBase extends Callback
 {
   public var sku : String;
   public var token : String;
-  public var item : PurchaseStruct;
+  public var item : PurchaseInfo;
 
   public function new(sku : String)
   {
@@ -181,7 +202,6 @@ class PurchaseBase extends Callback
 
   public function finish()
   {
-    trace(["finish", "implement me"]);
   }
 }
 
