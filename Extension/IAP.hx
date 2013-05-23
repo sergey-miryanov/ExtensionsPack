@@ -72,9 +72,28 @@ class IAPAndroid
 
 class IAPCpp
 {
-  public static function getItems()
+  public static function getItems(productList : ProductListBase)
   {
     trace(["getItems"]);
+    productList.finish();
+  }
+
+  public static function purchaseItem(purchase : PurchaseBase)
+  {
+    trace(["purchaseItem", purchase.sku]);
+    purchase.finish();
+  }
+
+  public static function consumeItem(purchase : PurchaseBase)
+  {
+    trace(["consumeItem", purchase.sku, purchase.item]);
+    purchase.finish();
+  }
+
+  public static function getPurchases(purchasesList : PurchasesListBase)
+  {
+    trace(["getPurchases"]);
+    purchasesList.finish();
   }
 }
 
