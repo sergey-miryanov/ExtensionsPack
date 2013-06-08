@@ -117,23 +117,29 @@ typedef PurchaseInfo = {
 
 class Callback
 {
+  public var errorOccured : Bool;
+
   public function new()
   {
+    errorOccured = false;
   }
 
   public function onError(response : Int, where : String)
   {
     trace(["onError", response, where, IAPErrorMessage.get(response)]);
+    errorOccured = true;
   }
 
   public function onWarning(msg : String, where : String)
   {
     trace(["onWarning", where, msg]);
+    errorOccured = true;
   }
 
   public function onException(msg : String, where : String)
   {
     trace(["onException", where, msg]);
+    errorOccured = true;
   }
 }
 
