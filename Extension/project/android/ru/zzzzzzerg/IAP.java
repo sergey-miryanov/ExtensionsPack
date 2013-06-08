@@ -312,6 +312,10 @@ public class IAP
     {
       callback.call("onException", new Object[] {e.toString(), "consumeItem"});
     }
+    finally
+    {
+      callback.call("finish", new Object[]{});
+    }
   }
 
   public static void purchaseItem(String sku, int rc,
