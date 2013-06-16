@@ -57,6 +57,8 @@
   <java path="source/java" />
   <!-- <java path="flurry" /> -->
   <template path="FlurryAgent.jar" rename="libs/FlurryAgent.jar" if="android" />
+  <template path="google-play-services.jar" rename="libs/google-play-services.jar" if="android" />
   <template path="AndroidManifest.xml" if="android" />
+  <template path="ids.xml" rename="res/values/ids.xml" if="android" />
 
 </project>
