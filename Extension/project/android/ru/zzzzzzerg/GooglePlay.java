@@ -13,6 +13,8 @@ import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallback
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.Scopes;
+import com.google.android.gms.games.achievement.OnAchievementsLoadedListener;
+import com.google.android.gms.games.achievement.AchievementBuffer;
 
 import org.haxe.nme.HaxeObject;
 import org.haxe.nme.GameActivity;
@@ -41,8 +43,8 @@ public class GooglePlay
   public static void start(Context ctx)
   {
     gamesClient = new GamesClient.Builder(ctx,
-        new GooglePlayConnectionCallback(),
-        new GooglePlayConnectionFailedListener())
+        new GooglePlayCallback(),
+        new GooglePlayCallback())
       .setGravityForPopups(Gravity.TOP | Gravity.CENTER_HORIZONTAL)
       .setScopes(Scopes.GAMES)
       .create();
@@ -83,7 +85,7 @@ public class GooglePlay
         // not sure should we run gamesClient.connect in thread
         // but unlock and increment achievement sould
         GLSurfaceView view = GameActivity.getMainView();
-        view.queueEvent(new Runnable(){
+        GameActivity.getInstance().runOnUiThread(new Runnable(){
           public void run() {
             gamesClient.connect();
           }});
@@ -119,7 +121,7 @@ public class GooglePlay
   public static void unlockAchievement(final String achievementId)
   {
     GLSurfaceView view = GameActivity.getMainView();
-    view.queueEvent(new Runnable(){
+    GameActivity.getInstance().runOnUiThread(new Runnable(){
       public void run() {
         try
         {
@@ -140,7 +142,7 @@ public class GooglePlay
   public static void incrementAchievement(final String achievementId, final int steps)
   {
     GLSurfaceView view = GameActivity.getMainView();
-    view.queueEvent(new Runnable(){
+    GameActivity.getInstance().runOnUiThread(new Runnable(){
       public void run() {
         try
         {
@@ -201,25 +203,32 @@ public class GooglePlay
     if(connectionCallback == null)
     {
       Log.d("trace", "Connection established, but connection callback is null");
-      return;
     }
-    connectionCallback.call("signedIn", new Object[] {});
+    else
+    {
+      connectionCallback.call("signedIn", new Object[] {});
+    }
+
+    if(gamesClient != null && gamesClient.isConnected())
+    {
+      gamesClient.loadAchievements(new GooglePlayCallback());
+    }
   }
 }
 
-class GooglePlayConnectionCallback implements
+class GooglePlayCallback implements
       ConnectionCallbacks,
-      OnConnectionFailedListener
+      OnConnectionFailedListener,
+      OnAchievementsLoadedListener
 {
   public void onConnected(Bundle hint)
   {
-    Log.i("trace", "GooglePlay.onConnected");
+    Log.i("trace", "GooglePlayCallback.onConnected");
     GooglePlay.connectionEstablished();
   }
-
   public void onDisconnected()
   {
-    Log.i("trace", "GooglePlay.onDisconnected");
+    Log.i("trace", "GooglePlayCallback.onDisconnected");
     GooglePlay.result = ConnectionResult.SUCCESS;
   }
   public void onConnectionFailed(ConnectionResult result)
@@ -229,23 +238,27 @@ class GooglePlayConnectionCallback implements
       GooglePlay.result = result.getErrorCode();
       if(GooglePlay.result == ConnectionResult.SIGN_IN_REQUIRED)
       {
-        Log.i("trace", "GooglePlay: SignIn Required");
+        Log.i("trace", "GooglePlayCallback: SignIn Required");
         result.startResolutionForResult(GameActivity.getInstance(),
             GooglePlay.GOOGLE_PLAY_SIGN_IN_REQUEST);
       }
       else
       {
-        Log.i("trace", "GooglePlay.onConnectionFailed: " + GooglePlay.result);
+        Log.i("trace", "GooglePlayCallback.onConnectionFailed: " + GooglePlay.result);
       }
     }
     catch(Exception e)
     {
-      Log.i("trace", "GooglePlay.onConnectionFailed: " + e.toString());
+      Log.i("trace", "GooglePlayCallback.onConnectionFailed: " + e.toString());
       if(GooglePlay.connectionCallback != null)
       {
         GooglePlay.connectionCallback.call("onException",
             new Object[] {e.toString(), "onConnectionFailed"});
       }
     }
+  }
+  public void onAchievementsLoaded(int statusCode, AchievementBuffer buffer)
+  {
+    Log.i("trace", "GooglePlayCallback.onAchievementsLoaded: " + statusCode);
   }
 }
