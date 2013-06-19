@@ -15,6 +15,8 @@ class GooglePlayImpl
   static var _unlockAchievement : Dynamic = null;
   static var _incrementAchievement : Dynamic = null;
   static var _showAchievements : Dynamic = null;
+  static var _submitScore : Dynamic = null;
+  static var _showLeaderboard : Dynamic = null;
 
   public static function signIn(_callback : GooglePlayConnectionHandler)
   {
@@ -69,6 +71,28 @@ class GooglePlayImpl
 
     _showAchievements();
   }
+
+  public static function submitScore(leaderboardId : String, score : Int)
+  {
+    if(_submitScore == null)
+    {
+      _submitScore = nme.JNI.createStaticMethod("ru/zzzzzzerg/GooglePlay",
+          "submitScore", "(Ljava/lang/String;J)V");
+    }
+
+    _submitScore(leaderboardId, score);
+  }
+
+  public static function showLeaderboard(leaderboardId : String)
+  {
+    if(_showLeaderboard == null)
+    {
+      _showLeaderboard = nme.JNI.createStaticMethod("ru/zzzzzzerg/GooglePlay",
+          "showLeaderboard", "(Ljava/lang/String;)V");
+    }
+
+    _showLeaderboard(leaderboardId);
+  }
 }
 #end
 
@@ -93,6 +117,14 @@ class GooglePlayFallback
   public static function showAchievements()
   {
     trace(["Not implemented", "showAchievements"]);
+  }
+  public static function submitScore(leaderboardId : String, score : Int)
+  {
+    trace(["Not implemented", "submitScore", leaderboardId, score]);
+  }
+  public static function showLeaderboard(leaderboardId : String)
+  {
+    trace(["Not implemented", "showLeaderboard", leaderboardId]);
   }
 }
 

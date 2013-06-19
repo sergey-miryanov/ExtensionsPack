@@ -27,6 +27,7 @@ public class GooglePlay
 
   public static int GOOGLE_PLAY_SIGN_IN_REQUEST = 20202;
   public static int GOOGLE_PLAY_SHOW_ACHIEVEMENTS_REQUEST = 20203;
+  public static int GOOGLE_PLAY_SHOW_LEADERBOARD_REQUEST = 20204;
 
   static void handleException(Exception e, String where)
   {
@@ -179,6 +180,40 @@ public class GooglePlay
     }
   }
 
+  public static void submitScore(String leaderboardId, long score)
+  {
+    try
+    {
+      if(gamesClient != null && gamesClient.isConnected())
+      {
+        gamesClient.submitScore(leaderboardId, score);
+        Log.i("trace", "Submit score " + score + " to " + leaderboardId);
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "submitScore");
+    }
+  }
+
+  public static void showLeaderboard(String leaderboardId)
+  {
+    try
+    {
+      if(gamesClient != null && gamesClient.isConnected())
+      {
+        Intent intent = gamesClient.getLeaderboardIntent(leaderboardId);
+        GameActivity.getInstance().startActivityForResult(intent,
+            GOOGLE_PLAY_SHOW_LEADERBOARD_REQUEST);
+
+        Log.i("trace", "Starting activity for show leaderboard");
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "showLeaderboard");
+    }
+  }
 
   public static boolean handleActivityResult(int rc, int resultCode,
       Intent data)
@@ -192,6 +227,11 @@ public class GooglePlay
     else if(rc == GOOGLE_PLAY_SHOW_ACHIEVEMENTS_REQUEST)
     {
       Log.i("trace", "Activity for show achievements handled");
+      return true;
+    }
+    else if(rc == GOOGLE_PLAY_SHOW_LEADERBOARD_REQUEST)
+    {
+      Log.i("trace", "Activity for show leaderboard handled");
       return true;
     }
 
