@@ -4,11 +4,15 @@ Extensions Pack for Haxe/NME
 This repository contains extensions for Haxe/NME that I use in my
 current project.
 
-Following extensions already made:
+Following extensions already made (android):
 - Flurry (http://www.flurry.com/)
 - Localytics (http://www.localytics.com/)
 - InternalStorage wrapper (http://developer.android.com/guide/topics/data/data-storage.html#filesInternal)
 - Google Play In-App Billing version 3 (http://developer.android.com/google/play/billing/api.html)
+- Google Play Game Services (https://developers.google.com/games/services/)
+  - Achievements
+  - Leaderboards
+  - Cloud Save
 
 License
 -------
