@@ -5,6 +5,7 @@
 		
 		::if WIN_REQUIRE_SHADERS::<uses-feature android:glEsVersion="0x00020000" android:required="true" />::elseif WIN_ALLOW_SHADERS::<uses-feature android:glEsVersion="0x00020000" android:required="false" />::end::
 		
+    <meta-data android:name="com.google.android.gms.games.APP_ID" android:value="@string/app_id" />
 		<activity android:name="MainActivity" android:label="::APP_TITLE::" android:configChanges="keyboard|keyboardHidden|orientation"::if (WIN_ORIENTATION!=""):: android:screenOrientation="::WIN_ORIENTATION::"::end::>
 			
 			<intent-filter>
