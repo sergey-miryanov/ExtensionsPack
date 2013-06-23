@@ -7,14 +7,21 @@ import android.util.Log;
 import android.view.Gravity;
 import android.opengl.GLSurfaceView;
 
-import com.google.android.gms.games.GamesClient;
-import com.google.android.gms.games.GamesClient.Builder;
 import com.google.android.gms.common.GooglePlayServicesClient.ConnectionCallbacks;
 import com.google.android.gms.common.GooglePlayServicesClient.OnConnectionFailedListener;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.Scopes;
+
+import com.google.android.gms.games.GamesClient;
 import com.google.android.gms.games.achievement.OnAchievementsLoadedListener;
 import com.google.android.gms.games.achievement.AchievementBuffer;
+
+import com.google.android.gms.appstate.AppStateClient;
+import com.google.android.gms.appstate.AppStateBuffer;
+import com.google.android.gms.appstate.AppState;
+import com.google.android.gms.appstate.OnStateListLoadedListener;
+import com.google.android.gms.appstate.OnStateDeletedListener;
+import com.google.android.gms.appstate.OnStateLoadedListener;
 
 import org.haxe.nme.HaxeObject;
 import org.haxe.nme.GameActivity;
@@ -22,14 +29,17 @@ import org.haxe.nme.GameActivity;
 public class GooglePlay
 {
   public static GamesClient gamesClient = null;
+  public static AppStateClient appStateClient = null;
+
   public static int result = ConnectionResult.DEVELOPER_ERROR;
   public static HaxeObject connectionCallback = null;
 
-  public static int GOOGLE_PLAY_SIGN_IN_REQUEST = 20202;
+  public static int GOOGLE_PLAY_SIGN_IN_REQUEST = 20201;
+  public static int GOOGLE_PLAY_APP_STATE_SIGN_IN_REQUEST = 20202;
   public static int GOOGLE_PLAY_SHOW_ACHIEVEMENTS_REQUEST = 20203;
   public static int GOOGLE_PLAY_SHOW_LEADERBOARD_REQUEST = 20204;
 
-  static void handleException(Exception e, String where)
+  public static void handleException(Exception e, String where)
   {
     if(connectionCallback != null)
     {
@@ -41,13 +51,42 @@ public class GooglePlay
     }
   }
 
+  public static void gamesClientError(int code, String where)
+  {
+    if(connectionCallback != null)
+    {
+      connectionCallback.call("onError", new Object[] {"GAMES_CLIENT", code, where});
+    }
+    else
+    {
+      Log.i("trace", "Error at " + where + " with code = " + code);
+    }
+  }
+  public static void appStateClientError(int code, String where)
+  {
+    if(connectionCallback != null)
+    {
+      connectionCallback.call("onError", new Object[] {"APP_STATE_CLIENT", code, where});
+    }
+    else
+    {
+      Log.i("trace", "Error at " + where + " with code = " + code);
+    }
+  }
+
   public static void start(Context ctx)
   {
     gamesClient = new GamesClient.Builder(ctx,
-        new GooglePlayCallback(),
-        new GooglePlayCallback())
+        new GooglePlayCallback("GAMES_CLIENT"),
+        new GooglePlayCallback("GAMES_CLIENT"))
       .setGravityForPopups(Gravity.TOP | Gravity.CENTER_HORIZONTAL)
       .setScopes(Scopes.GAMES)
+      .create();
+
+    appStateClient = new AppStateClient.Builder(ctx,
+        new GooglePlayCallback("APP_STATE_CLIENT"),
+        new GooglePlayCallback("APP_STATE_CLIENT"))
+      .setScopes(Scopes.APP_STATE)
       .create();
   }
 
@@ -58,6 +97,11 @@ public class GooglePlay
       gamesClient.disconnect();
       gamesClient = null;
     }
+    if(appStateClient != null)
+    {
+      appStateClient.disconnect();
+      appStateClient = null;
+    }
   }
 
   public static void signIn(HaxeObject callback)
@@ -65,7 +109,7 @@ public class GooglePlay
     try
     {
       connectionCallback = callback;
-      callback.call("initErrorTable", new Object[] {
+      callback.call("initGamesClientErrors", new Object[] {
         ConnectionResult.DEVELOPER_ERROR,
         ConnectionResult.INTERNAL_ERROR,
         ConnectionResult.INVALID_ACCOUNT,
@@ -78,6 +122,19 @@ public class GooglePlay
         ConnectionResult.SERVICE_VERSION_UPDATE_REQUIRED,
         ConnectionResult.SIGN_IN_REQUIRED,
         ConnectionResult.SUCCESS});
+      callback.call("initAppStateClientErrors", new Object[] {
+        AppStateClient.STATUS_CLIENT_RECONNECT_REQUIRED,
+        AppStateClient.STATUS_DEVELOPER_ERROR,
+        AppStateClient.STATUS_INTERNAL_ERROR,
+        AppStateClient.STATUS_NETWORK_ERROR_NO_DATA,
+        AppStateClient.STATUS_NETWORK_ERROR_OPERATION_DEFERRED,
+        AppStateClient.STATUS_NETWORK_ERROR_OPERATION_FAILED,
+        AppStateClient.STATUS_NETWORK_ERROR_STALE_DATA,
+        AppStateClient.STATUS_OK,
+        AppStateClient.STATUS_STATE_KEY_LIMIT_EXCEEDED,
+        AppStateClient.STATUS_STATE_KEY_NOT_FOUND,
+        AppStateClient.STATUS_WRITE_OUT_OF_DATE_VERSION,
+        AppStateClient.STATUS_WRITE_SIZE_EXCEEDED});
 
       if(!gamesClient.isConnected() && !gamesClient.isConnecting())
       {
@@ -93,12 +150,31 @@ public class GooglePlay
       }
       else if(gamesClient.isConnecting())
       {
-        Log.i("trace", "Already connecting");
+        Log.i("trace", "GamesClient already connecting");
       }
       else if(gamesClient.isConnected())
       {
-        Log.i("trace", "Already connected");
-        connectionEstablished();
+        Log.i("trace", "GamesClient already connected");
+        connectionEstablished("GAMES_CLIENT");
+      }
+
+      if(!appStateClient.isConnected() && !appStateClient.isConnected())
+      {
+        Log.i("trace", "Connecting to AppStateClient");
+
+        GameActivity.getInstance().runOnUiThread(new Runnable(){
+          public void run() {
+            appStateClient.connect();
+          }});
+      }
+      else if(appStateClient.isConnecting())
+      {
+        Log.i("trace", "AppStateClient already connecting");
+      }
+      else if(appStateClient.isConnected())
+      {
+        Log.i("trace", "AppStateClient already connected");
+        connectionEstablished("APP_STATE_CLIENT");
       }
     }
     catch(Exception e)
@@ -114,7 +190,15 @@ public class GooglePlay
       gamesClient.signOut(); // FIXME: sign out with listener
       if(connectionCallback != null)
       {
-        connectionCallback.call("signedOut", new Object[]{});
+        connectionCallback.call("signedOut", new Object[]{"GAMES_CLIENT"});
+      }
+    }
+    if(appStateClient != null && appStateClient.isConnected())
+    {
+      appStateClient.signOut();
+      if(connectionCallback != null)
+      {
+        connectionCallback.call("signedOut", new Object[] {"APP_STATE_CLIENT"});
       }
     }
   }
@@ -215,13 +299,89 @@ public class GooglePlay
     }
   }
 
+  public static void loadState(int stateKey)
+  {
+    try
+    {
+      if(appStateClient != null && appStateClient.isConnected())
+      {
+        appStateClient.loadState(new GooglePlayCallback("APP_STATE_CLIENT"),
+            stateKey);
+
+        Log.i("trace", "Loading state: " + stateKey);
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "loadState");
+    }
+  }
+
+  public static void updateState(int stateKey, String data)
+  {
+    try
+    {
+      if(appStateClient != null && appStateClient.isConnected())
+      {
+        appStateClient.updateState(stateKey, data.getBytes());
+
+        Log.i("trace", "Updating state: " + stateKey);
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "updateState");
+    }
+  }
+
+  public static void resolveState(int stateKey, String version, String data)
+  {
+    try
+    {
+      if(appStateClient != null && appStateClient.isConnected())
+      {
+        appStateClient.resolveState(new GooglePlayCallback("APP_STATE_CLIENT"),
+              stateKey, version, data.getBytes());
+
+        Log.i("trace", "Resolving state: " + stateKey + " version: " + version);
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "resolveState");
+    }
+  }
+
+  public static void deleteState(int stateKey)
+  {
+    try
+    {
+      if(appStateClient != null && appStateClient.isConnected())
+      {
+        appStateClient.deleteState(new GooglePlayCallback("APP_STATE_CLIENT"),
+            stateKey);
+
+        Log.i("trace", "Deleting state: " + stateKey);
+      }
+    }
+    catch(Exception e)
+    {
+      handleException(e, "deleteState");
+    }
+  }
+
   public static boolean handleActivityResult(int rc, int resultCode,
       Intent data)
   {
     Log.i("trace", "handleActivityResult: " + rc + " " + resultCode);
     if(rc == GOOGLE_PLAY_SIGN_IN_REQUEST)
     {
-      connectionEstablished();
+      connectionEstablished("GAMES_CLIENT");
+      return true;
+    }
+    else if(rc == GOOGLE_PLAY_APP_STATE_SIGN_IN_REQUEST)
+    {
+      connectionEstablished("APP_STATE_CLIENT");
       return true;
     }
     else if(rc == GOOGLE_PLAY_SHOW_ACHIEVEMENTS_REQUEST)
@@ -237,7 +397,7 @@ public class GooglePlay
 
     return false;
   }
-  public static void connectionEstablished()
+  public static void connectionEstablished(String what)
   {
     Log.d("trace", "Connection established");
     if(connectionCallback == null)
@@ -246,12 +406,16 @@ public class GooglePlay
     }
     else
     {
-      connectionCallback.call("signedIn", new Object[] {});
+      connectionCallback.call("signedIn", new Object[] {what});
     }
 
-    if(gamesClient != null && gamesClient.isConnected())
+    if(what == "GAMES_CLIENT" && gamesClient != null && gamesClient.isConnected())
     {
-      gamesClient.loadAchievements(new GooglePlayCallback());
+      gamesClient.loadAchievements(new GooglePlayCallback("GAMES_CLIENT"));
+    }
+    if(what == "APP_STATE_CLIENT" && appStateClient != null && appStateClient.isConnected())
+    {
+      appStateClient.listStates(new GooglePlayCallback("APP_STATE_CLIENT"));
     }
   }
 }
@@ -259,18 +423,31 @@ public class GooglePlay
 class GooglePlayCallback implements
       ConnectionCallbacks,
       OnConnectionFailedListener,
-      OnAchievementsLoadedListener
+      OnAchievementsLoadedListener,
+      OnStateListLoadedListener,
+      OnStateDeletedListener,
+      OnStateLoadedListener
 {
+  String what;
+
+  GooglePlayCallback(String what)
+  {
+    super();
+    this.what = what;
+  }
+
   public void onConnected(Bundle hint)
   {
-    Log.i("trace", "GooglePlayCallback.onConnected");
-    GooglePlay.connectionEstablished();
+    Log.i("trace", what + ": GooglePlayCallback.onConnected");
+    GooglePlay.connectionEstablished(what);
   }
+
   public void onDisconnected()
   {
-    Log.i("trace", "GooglePlayCallback.onDisconnected");
+    Log.i("trace", what + ": GooglePlayCallback.onDisconnected");
     GooglePlay.result = ConnectionResult.SUCCESS;
   }
+
   public void onConnectionFailed(ConnectionResult result)
   {
     try
@@ -278,18 +455,26 @@ class GooglePlayCallback implements
       GooglePlay.result = result.getErrorCode();
       if(GooglePlay.result == ConnectionResult.SIGN_IN_REQUIRED)
       {
-        Log.i("trace", "GooglePlayCallback: SignIn Required");
-        result.startResolutionForResult(GameActivity.getInstance(),
-            GooglePlay.GOOGLE_PLAY_SIGN_IN_REQUEST);
+        Log.i("trace", what + ": GooglePlayCallback: SignIn Required");
+        if(what == "GAMES_CLIENT")
+        {
+          result.startResolutionForResult(GameActivity.getInstance(),
+              GooglePlay.GOOGLE_PLAY_SIGN_IN_REQUEST);
+        }
+        else if(what == "APP_STATE_CLIENT")
+        {
+          result.startResolutionForResult(GameActivity.getInstance(),
+              GooglePlay.GOOGLE_PLAY_APP_STATE_SIGN_IN_REQUEST);
+        }
       }
       else
       {
-        Log.i("trace", "GooglePlayCallback.onConnectionFailed: " + GooglePlay.result);
+        Log.i("trace", what + ": GooglePlayCallback.onConnectionFailed: " + GooglePlay.result);
       }
     }
     catch(Exception e)
     {
-      Log.i("trace", "GooglePlayCallback.onConnectionFailed: " + e.toString());
+      Log.i("trace", what + ": GooglePlayCallback.onConnectionFailed: " + e.toString());
       if(GooglePlay.connectionCallback != null)
       {
         GooglePlay.connectionCallback.call("onException",
@@ -297,8 +482,77 @@ class GooglePlayCallback implements
       }
     }
   }
+
   public void onAchievementsLoaded(int statusCode, AchievementBuffer buffer)
   {
-    Log.i("trace", "GooglePlayCallback.onAchievementsLoaded: " + statusCode);
+    Log.i("trace", what + ": GooglePlayCallback.onAchievementsLoaded: " + statusCode);
+  }
+
+  public void onStateListLoaded(int statusCode, AppStateBuffer buffer)
+  {
+    Log.i("trace", what + ": GooglePlayCallback.onStateListLoaded: " + statusCode);
+    for(AppState s : buffer)
+    {
+      String version = s.getLocalVersion();
+      int key = s.getKey();
+
+      GooglePlay.connectionCallback.call("addAppState",
+          new Object[] {key, version});
+    }
+  }
+
+  public void onStateDeleted(int statusCode, int stateKey)
+  {
+    Log.i("trace", what + ": GooglePlayCallback.onStateDeleted: " +
+        statusCode + " key = " + stateKey);
+  }
+
+  public void onStateConflict(int stateKey, String resolvedVersion,
+      byte[] localData, byte[] serverData)
+  {
+    try
+    {
+      Log.i("trace", what + ": GooglePlayCallback.onStateConflict: key = " +
+          stateKey + " version = " + resolvedVersion);
+
+      String localString = new String(localData);
+      String serverString = new String(serverData);
+
+      GooglePlay.connectionCallback.call("stateConflict",
+          new Object[] {stateKey, resolvedVersion, localString, serverString});
+    }
+    catch(Exception e)
+    {
+      GooglePlay.handleException(e, "onStateConflict");
+    }
+  }
+
+  public void onStateLoaded(int statusCode, int stateKey, byte[] localData)
+  {
+    try
+    {
+      Log.i("trace", what + ": GooglePlayCallback.onStateLoaded: " +
+          statusCode + " key = " + stateKey);
+
+      if(statusCode == AppStateClient.STATUS_OK)
+      {
+        String data = new String(localData);
+        GooglePlay.connectionCallback.call("stateLoaded",
+            new Object[] {stateKey, data});
+      }
+      else if(statusCode == AppStateClient.STATUS_STATE_KEY_NOT_FOUND)
+      {
+        GooglePlay.connectionCallback.call("stateNotFound",
+            new Object[] {stateKey});
+      }
+      else
+      {
+        GooglePlay.appStateClientError(statusCode, "onStateLoaded");
+      }
+    }
+    catch(Exception e)
+    {
+      GooglePlay.handleException(e, "onStateLoaded");
+    }
   }
 }
