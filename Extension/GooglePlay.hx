@@ -7,7 +7,6 @@ typedef GooglePlay = GooglePlayImpl;
 typedef GooglePlay = GooglePlayFallback;
 #end
 
-#if android
 class GooglePlayCallback
 {
   static var gamesClientErrors : Map<Int, String> = null;
@@ -107,8 +106,40 @@ class GooglePlayCallback
   {
     trace(["Exception", where, msg]);
   }
+
+  public function signedIn(what : String)
+  {
+    trace(["SignedIn", what]);
+  }
+  public function signedOut(what : String)
+  {
+    trace(["SignedOut", what]);
+  }
+
+  public function addAppState(key : Int, version : String)
+  {
+    trace(["app state", key, version]);
+  }
+
+  public function stateLoaded(key : Int, data : String)
+  {
+    trace(["state loaded", key, data]);
+  }
+
+  public function stateNotFound(key : Int)
+  {
+    trace(["state not found", key]);
+  }
+
+  public function stateConflict(key : Int, resolvedVersion : String,
+      localData : String, serverData : String)
+  {
+    trace(["state conflict", key, resolvedVersion, localData, serverData]);
+  }
+
 }
 
+#if android
 class GooglePlayImpl extends GooglePlayCallback
 {
   static var _signIn : Dynamic = null;
@@ -243,67 +274,62 @@ class GooglePlayImpl extends GooglePlayCallback
 
     _deleteState(stateKey);
   }
-
-  public function signedIn(what : String)
-  {
-    trace(["SignedIn", what]);
-  }
-  public function signedOut(what : String)
-  {
-    trace(["SignedOut", what]);
-  }
-
-  public function addAppState(key : Int, version : String)
-  {
-    trace(["app state", key, version]);
-  }
-
-  public function stateLoaded(key : Int, data : String)
-  {
-    trace(["state loaded", key, data]);
-  }
-
-  public function stateNotFound(key : Int)
-  {
-    trace(["state not found", key]);
-  }
-
-  public function stateConflict(key : Int, resolvedVersion : String,
-      localData : String, serverData : String)
-  {
-    trace(["state conflict", key, resolvedVersion, localData, serverData]);
-  }
 }
 #end
 
 class GooglePlayFallback extends GooglePlayCallback
 {
-  public static function signIn()
+  public function new()
+  {
+    super();
+  }
+
+  public function signIn()
   {
     trace(["Not implemented", "signIn"]);
   }
-  public static function signOut()
+  public function signOut()
   {
     trace(["Not implemented", "signOut"]);
   }
-  public static function unlockAchievement(achievementId : String)
+  public function unlockAchievement(achievementId : String)
   {
     trace(["Not implemented", "unlockAchievement", achievementId]);
   }
-  public static function incrementAchievement(achievementId : String, steps : Int)
+  public function incrementAchievement(achievementId : String, steps : Int)
   {
     trace(["Not implemented", "incrementAchievement", achievementId, steps]);
   }
-  public static function showAchievements()
+  public function showAchievements()
   {
     trace(["Not implemented", "showAchievements"]);
   }
-  public static function submitScore(leaderboardId : String, score : Int)
+  public function submitScore(leaderboardId : String, score : Int)
   {
     trace(["Not implemented", "submitScore", leaderboardId, score]);
   }
-  public static function showLeaderboard(leaderboardId : String)
+  public function showLeaderboard(leaderboardId : String)
   {
     trace(["Not implemented", "showLeaderboard", leaderboardId]);
+  }
+
+  public function loadState(stateKey : Int)
+  {
+    trace(["Not implemented", "loadState", stateKey]);
+  }
+
+  public function updateState(stateKey : Int, data : String)
+  {
+    trace(["Not implemented", "updateState", stateKey, data]);
+  }
+
+  public function resolveState(stateKey : Int, version : String, data : String)
+  {
+    trace(["Not implemented", "resolveState", stateKey, version, data]);
+  }
+
+  public function deleteState(stateKey : Int)
+  {
+    trace(["Not implemented", "deleteState", stateKey]);
   }
 }
