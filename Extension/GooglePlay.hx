@@ -1,5 +1,7 @@
 package ;
 
+import msignal.Signal;
+
 #if android
 import nme.JNI;
 typedef GooglePlay = GooglePlayImpl;
@@ -12,6 +14,10 @@ class GooglePlayCallback
   static var gamesClientErrors : Map<Int, String> = null;
   static var appStateClientErrors : Map<Int, String> = null;
 
+  public var signedIn : Signal1<String>;
+  public var stateLoaded : Signal2<Int, String>;
+  public var stateNotFound : Signal1<Int>;
+
   public function new()
   {
     if(gamesClientErrors == null)
@@ -22,6 +28,10 @@ class GooglePlayCallback
     {
       appStateClientErrors = new Map();
     }
+
+    signedIn = new Signal1();
+    stateLoaded  = new Signal2();
+    stateNotFound = new Signal1();
   }
 
   public function initGamesClientErrors(DEVELOPER_ERROR : Int,
@@ -107,9 +117,10 @@ class GooglePlayCallback
     trace(["Exception", where, msg]);
   }
 
-  public function signedIn(what : String)
+  public function onSignedIn(what : String)
   {
     trace(["SignedIn", what]);
+    signedIn.dispatch(what);
   }
   public function signedOut(what : String)
   {
@@ -121,14 +132,16 @@ class GooglePlayCallback
     trace(["app state", key, version]);
   }
 
-  public function stateLoaded(key : Int, data : String)
+  public function onStateLoaded(key : Int, data : String)
   {
-    trace(["state loaded", key, data]);
+    trace(["StateLoaded", key, data]);
+    stateLoaded.dispatch(key, data);
   }
 
-  public function stateNotFound(key : Int)
+  public function onStateNotFound(key : Int)
   {
-    trace(["state not found", key]);
+    trace(["StateNotFound", key]);
+    stateNotFound.dispatch(key);
   }
 
   public function stateConflict(key : Int, resolvedVersion : String,
@@ -155,6 +168,20 @@ class GooglePlayImpl extends GooglePlayCallback
   static var _resolveState : Dynamic = null;
   static var _deleteState : Dynamic = null;
 
+  var _available : Bool;
+
+  public function new()
+  {
+    super();
+
+    _available = false;
+  }
+
+  public function isAvailable()
+  {
+    return _available;
+  }
+
   public function signIn()
   {
     if(_signIn == null)
@@ -164,6 +191,7 @@ class GooglePlayImpl extends GooglePlayCallback
     }
 
     _signIn(this);
+    _available = true;
   }
 
   public function signOut()
@@ -284,9 +312,15 @@ class GooglePlayFallback extends GooglePlayCallback
     super();
   }
 
+  public function isAvailable()
+  {
+    return false;
+  }
+
   public function signIn()
   {
-    trace(["Not implemented", "signIn"]);
+    onSignedIn("GAMES_CLIENT");
+    onSignedIn("APP_STATE_CLIENT");
   }
   public function signOut()
   {
@@ -315,7 +349,7 @@ class GooglePlayFallback extends GooglePlayCallback
 
   public function loadState(stateKey : Int)
   {
-    trace(["Not implemented", "loadState", stateKey]);
+    onStateLoaded(stateKey, "");
   }
 
   public function updateState(stateKey : Int, data : String)

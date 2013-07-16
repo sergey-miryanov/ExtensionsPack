@@ -406,7 +406,7 @@ public class GooglePlay
     }
     else
     {
-      connectionCallback.call("signedIn", new Object[] {what});
+      connectionCallback.call("onSignedIn", new Object[] {what});
     }
 
     if(what == "GAMES_CLIENT" && gamesClient != null && gamesClient.isConnected())
@@ -537,12 +537,19 @@ class GooglePlayCallback implements
       if(statusCode == AppStateClient.STATUS_OK)
       {
         String data = new String(localData);
-        GooglePlay.connectionCallback.call("stateLoaded",
+        GooglePlay.connectionCallback.call("onStateLoaded",
+            new Object[] {stateKey, data});
+      }
+      else if(statusCode == AppStateClient.STATUS_NETWORK_ERROR_STALE_DATA)
+      {
+        Log.i("trace", "Load possible out-of-sync cached data");
+        String data = new String(localData);
+        GooglePlay.connectionCallback.call("onStateLoaded",
             new Object[] {stateKey, data});
       }
       else if(statusCode == AppStateClient.STATUS_STATE_KEY_NOT_FOUND)
       {
-        GooglePlay.connectionCallback.call("stateNotFound",
+        GooglePlay.connectionCallback.call("onStateNotFound",
             new Object[] {stateKey});
       }
       else
