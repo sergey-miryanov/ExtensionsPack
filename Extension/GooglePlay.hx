@@ -9,14 +9,30 @@ typedef GooglePlay = GooglePlayImpl;
 typedef GooglePlay = GooglePlayFallback;
 #end
 
+typedef AchievementInfo = {
+  id : String,
+  state : Int,
+  type : Int,
+};
+
 class GooglePlayCallback
 {
   static var gamesClientErrors : Map<Int, String> = null;
   static var appStateClientErrors : Map<Int, String> = null;
 
+  public static var STATE_UNLOCKED = 0;
+  public static var STATE_REVEALED = 1;
+  public static var STATE_HIDDEN = 2;
+
+  public static var TYPE_STANDARD = 0;
+  public static var TYPE_INCREMENTAL = 1;
+
   public var signedIn : Signal1<String>;
   public var stateLoaded : Signal2<Int, String>;
   public var stateNotFound : Signal1<Int>;
+
+  public var achievementAdded : Signal1<AchievementInfo>;
+  public var achievementsLoaded : Signal0;
 
   public function new()
   {
@@ -32,6 +48,9 @@ class GooglePlayCallback
     signedIn = new Signal1();
     stateLoaded  = new Signal2();
     stateNotFound = new Signal1();
+
+    achievementAdded = new Signal1();
+    achievementsLoaded = new Signal0();
   }
 
   public function initGamesClientErrors(DEVELOPER_ERROR : Int,
@@ -91,6 +110,20 @@ class GooglePlayCallback
     appStateClientErrors.set(STATUS_WRITE_SIZE_EXCEEDED, "AppState Write Size Exceeded");
   }
 
+  public function initAchievementStates(stateUnlocked : Int, stateRevealed : Int,
+      stateHidden : Int)
+  {
+    STATE_UNLOCKED = stateUnlocked;
+    STATE_REVEALED = stateRevealed;
+    STATE_HIDDEN = stateHidden;
+  }
+
+  public function initAchievementTypes(typeStandard : Int, typeIncremental : Int)
+  {
+    TYPE_STANDARD = typeStandard;
+    TYPE_INCREMENTAL = typeIncremental;
+  }
+
   public function onWarning(msg : String, where : String)
   {
     trace([where, msg]);
@@ -130,6 +163,18 @@ class GooglePlayCallback
   public function addAppState(key : Int, version : String)
   {
     trace(["app state", key, version]);
+  }
+
+  public function addAchievement(id : String, state : Int, type : Int)
+  {
+    trace(["AddAchievement", id]);
+    achievementAdded.dispatch({id : id, state : state, type : type});
+  }
+
+  public function onAchievementsLoaded()
+  {
+    trace("AchievementsLoaded");
+    achievementsLoaded.dispatch();
   }
 
   public function onStateLoaded(key : Int, data : String)

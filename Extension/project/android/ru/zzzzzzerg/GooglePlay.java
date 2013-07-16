@@ -15,6 +15,7 @@ import com.google.android.gms.common.Scopes;
 import com.google.android.gms.games.GamesClient;
 import com.google.android.gms.games.achievement.OnAchievementsLoadedListener;
 import com.google.android.gms.games.achievement.AchievementBuffer;
+import com.google.android.gms.games.achievement.Achievement;
 
 import com.google.android.gms.appstate.AppStateClient;
 import com.google.android.gms.appstate.AppStateBuffer;
@@ -135,6 +136,14 @@ public class GooglePlay
         AppStateClient.STATUS_STATE_KEY_NOT_FOUND,
         AppStateClient.STATUS_WRITE_OUT_OF_DATE_VERSION,
         AppStateClient.STATUS_WRITE_SIZE_EXCEEDED});
+
+      callback.call("initAchievementStates", new Object[] {
+        Achievement.STATE_UNLOCKED,
+        Achievement.STATE_REVEALED,
+        Achievement.STATE_HIDDEN,});
+      callback.call("initAchievementTypes", new Object[] {
+        Achievement.TYPE_STANDARD,
+        Achievement.TYPE_INCREMENTAL,});
 
       if(!gamesClient.isConnected() && !gamesClient.isConnecting())
       {
@@ -486,6 +495,17 @@ class GooglePlayCallback implements
   public void onAchievementsLoaded(int statusCode, AchievementBuffer buffer)
   {
     Log.i("trace", what + ": GooglePlayCallback.onAchievementsLoaded: " + statusCode);
+    for(Achievement a : buffer)
+    {
+      String id = a.getAchievementId();
+      int state = a.getState();
+      int type = a.getType();
+
+      GooglePlay.connectionCallback.call("addAchievement",
+          new Object[] {id, state, type});
+    }
+
+    GooglePlay.connectionCallback.call("onAchievementsLoaded", new Object[]{});
   }
 
   public void onStateListLoaded(int statusCode, AppStateBuffer buffer)
